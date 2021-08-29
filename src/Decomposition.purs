@@ -16,7 +16,7 @@ import Data.String.Utils (charAt, endsWith)
 import Data.Tuple (Tuple(..))
 import Krestia.Phonotactics (isValidWord)
 import Krestia.Utils (Error(..))
-import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, suffixes, usesPredicativeIdentity)
+import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, prefixToPostfix, suffixes, usesPredicativeIdentity)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
 newtype Decomposer a = Decomposer (String -> Either Error (Tuple a String))
@@ -131,9 +131,22 @@ decomposePostfixed = Decomposer f where
    f "" = Left (Other "Empty string")
    f word
       | any ((flip endsWith) word) ["dri", "gri", "dru", "gru"] = do
-         unsafeCrashWith "TODO"
+         let
+            remainingWord = prefixToPostfix word
+            next =
+               if endsWith "dri" word || endsWith "dru" word then
+                  CountableAssociativeNoun
+               else
+                  UncountableAssociativeNoun
+         Tuple base _ <- apply readBaseWord remainingWord
+         case base of
+            BaseStep wt | wt == CountableAssociativeNoun || wt == UncountableAssociativeNoun ->
+               pure (Tuple (SecondaryStep Postfixed (singleton next)) remainingWord)
+            _ -> unsafeCrashWith "Undefined"
       | endsWith "r" word = do
-         unsafeCrashWith "TODO"
+         let remainingWord = prefixToPostfix word
+         Tuple base _ <- apply readBaseWord remainingWord
+         pure (Tuple (SecondaryStep Postfixed (singleton Modifier)) remainingWord)
       | otherwise =
          Left (InvalidInflectionError word "Cannot read Postfixed")
 
