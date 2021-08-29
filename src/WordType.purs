@@ -223,7 +223,30 @@ baseTypeOf word =
                      Nothing)
 
 behavesLike :: Tuple Inflection WordType -> WordType -> Boolean
-behavesLike _ _ = unsafeCrashWith "TODO"
+behavesLike (Tuple Possessive _) Verb1 = true
+behavesLike (Tuple Possessive0 _) Verb0 = true
+behavesLike (Tuple Gerund _) UncountableNoun = true
+behavesLike (Tuple SpecificGerund _) UncountableNoun = true
+behavesLike (Tuple Quality _) UncountableNoun = true
+behavesLike (Tuple Translative _) Verb1 = true
+behavesLike (Tuple Translative0 _) Verb0 = true
+behavesLike (Tuple Argument1 _) CountableNoun = true
+behavesLike (Tuple Argument2 _) CountableNoun = true
+behavesLike (Tuple Argument3 _) CountableNoun = true
+behavesLike (Tuple Partial1 Verb1) Verb0 = true
+behavesLike (Tuple Partial1 Verb12) Verb2 = true
+behavesLike (Tuple Partial1 Verb123) Verb23 = true
+behavesLike (Tuple Partial2 Verb2) Verb0 = true
+behavesLike (Tuple Partial2 Verb12) Verb1 = true
+behavesLike (Tuple Partial2 Verb123) Verb13 = true
+behavesLike (Tuple Partial3 Verb3) Verb0 = true
+behavesLike (Tuple Partial3 Verb23) Verb2 = true
+behavesLike (Tuple Partial3 Verb123) Verb12 = true
+behavesLike (Tuple Commencement vt) vt2 = vt == vt2
+behavesLike (Tuple Reflection Verb12) Verb1 = true
+behavesLike (Tuple Shift2 vt) vt2 = vt == vt2
+behavesLike (Tuple Shift3 vt) vt2 = vt == vt2
+behavesLike _ _ = false
 
 usesPredicativeIdentity :: Inflection -> Maybe Inflection
 usesPredicativeIdentity SpecificGerund = Just Gerund
