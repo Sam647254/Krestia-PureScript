@@ -1,5 +1,7 @@
 module Test.DecomposeSpec where
 
+import Prelude
+
 import Data.Either (Either(..))
 import Data.List (List(..))
 import Krestia.Decomposition (DecomposedWord(..), decompose)
@@ -16,3 +18,6 @@ spec :: TestSuite
 spec = suite "Base words" do
    test "can read nouns" do
       testBaseWord "vilka" CountableNoun
+      testBaseWord "edre" CountableAssociativeNoun
+      testBaseWord "set" Verb12
+      testBaseWord "telit" Verb12

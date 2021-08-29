@@ -2,19 +2,21 @@ module Krestia.Decomposition where
 
 import Prelude
 
-import Data.Array (any, find, toUnfoldable)
+import Control.Alt ((<|>))
+import Data.Array (any, elem, find, toUnfoldable)
 import Data.Either (Either(..))
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.List (List(..), concatMap, singleton, (:))
+import Data.List (List(..), concatMap, reverse, singleton, (:))
+import Data.List.Partial (init, last)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.String (length, take, toUpper)
 import Data.String.Utils (charAt, endsWith)
 import Data.Tuple (Tuple(..))
 import Krestia.Phonotactics (isValidWord)
 import Krestia.Utils (Error(..))
-import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, usesPredicativeIdentity)
+import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, suffixes, usesPredicativeIdentity)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
 newtype Decomposer a = Decomposer (String -> Either Error (Tuple a String))
@@ -190,12 +192,46 @@ tryFullyDecompose (WI suffix inflection wordtypes) expectedTypes word =
    else
       Left (DecomposeError word)
 
-fullyDecompose_ :: WI -> List WordType -> List DecomposeStep -> String ->
+fullyDecompose_ :: List WI -> Array WordType -> List DecomposeStep -> String ->
    Either Error DecomposeResult
-fullyDecompose_ = unsafeCrashWith "TODO"
+fullyDecompose_ Nil wordtypes steps word = (do
+   Tuple piStep remainingWord <- apply decomposePI word
+   Tuple remainingSteps baseWord <- fullyDecompose wordtypes remainingWord
+   pure (Tuple (piStep : remainingSteps <> steps) baseWord))
+   <|> (do
+      Tuple postfixedStep remainingWord <- apply decomposePostfixed word
+      Tuple remainingSteps baseWord <- fullyDecompose wordtypes remainingWord
+      pure (Tuple (postfixedStep : remainingSteps) baseWord))
+   <|> (do
+      Tuple lastStep baseWord <- apply readBaseWord word
+      case lastStep of
+         BaseStep wt | wt `elem` wordtypes || wordtypes == [Any] ->
+            pure (Tuple (singleton lastStep) baseWord)
+         _ -> Left (InvalidInflectionError word "Invalid last step"))
+
+fullyDecompose_ (nextWI : remainingWI) wordtypes steps word =
+   case tryFullyDecompose nextWI (toUnfoldable wordtypes) word of
+      Right (Tuple remainingSteps baseWord) -> Right (Tuple (remainingSteps <> steps) baseWord)
+      Left _ -> fullyDecompose_ remainingWI wordtypes steps word
 
 fullyDecompose :: Array WordType -> String -> Either Error DecomposeResult
-fullyDecompose = unsafeCrashWith "TODO"
+fullyDecompose wordtypes word = (do
+   Tuple baseStep baseWord <- apply readSpecialWord word
+   pure (Tuple (singleton baseStep) baseWord))
+   <|> fullyDecompose_ (toUnfoldable suffixes) (toUnfoldable wordtypes) Nil word
 
 decompose :: String -> Either Error DecomposedWord
-decompose = unsafeCrashWith "TODO"
+decompose word = do
+   Tuple steps baseWord <- fullyDecompose [Any] word
+   let
+      inflections =
+         unsafePartial (init steps)
+            # map (\s ->
+               case s of
+                  SecondaryStep i _ -> i
+                  _ -> unsafeCrashWith "Undefined")
+            # reverse
+      baseStep = case unsafePartial (last steps) of
+         BaseStep wt -> wt
+         _ -> unsafeCrashWith "Undefined"
+   pure (DecomposedWord {steps: inflections, baseType: baseStep, baseWord: baseWord})
