@@ -1,0 +1,25 @@
+{
+  "name": "krestia",
+  "version": "0.0.1",
+  "description": "Parser and dictionary for Krestia",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sam647254/Krestia-PureScript.git"
+  },
+  "author": "Sam Wang",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/Sam647254/Krestia-PureScript/issues"
+  },
+  "homepage": "https://github.com/Sam647254/Krestia-PureScript#readme",
+  "devDependencies": {
+    "typescript": "^4.4.2"
+  }
+}
