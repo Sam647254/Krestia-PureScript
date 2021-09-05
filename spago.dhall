@@ -19,6 +19,7 @@ to generate this file without the comments in this block.
    , "test-unit"
    , "stringutils"
    , "node-fs"
+   , "express"
    ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

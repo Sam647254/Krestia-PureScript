@@ -12,6 +12,8 @@ import Data.Maybe (Maybe(..))
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.String.Utils (endsWith)
 import Data.Tuple (Tuple(..))
+import Foreign.Generic (class Encode)
+import Foreign.Generic.EnumEncoding (genericEncodeEnum)
 import Partial.Unsafe (unsafeCrashWith)
 
 data WordType
@@ -40,6 +42,9 @@ derive instance genericWordType :: Generic WordType _
 
 instance showWordType :: Show WordType where
    show = genericShow
+
+instance encodeWordType :: Encode WordType where
+   encode = genericEncodeEnum { constructorTagTransform: identity }
 
 data Inflection
    = Definite
@@ -89,6 +94,9 @@ derive instance genericInflection :: Generic Inflection _
 
 instance showInflection :: Show Inflection where
    show = genericShow
+
+instance encodeInflection :: Encode Inflection where
+   encode = genericEncodeEnum { constructorTagTransform: identity }
 
 data WI = WI String Inflection (Array WordType)
 

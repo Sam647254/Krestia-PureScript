@@ -9,11 +9,13 @@ import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List (List(..), concatMap, reverse, singleton, (:))
+import Data.List as L
 import Data.List.Partial (init, last)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.String (length, take, toUpper)
 import Data.String.Utils (charAt, endsWith)
 import Data.Tuple (Tuple(..))
+import Foreign.Generic (class Encode, defaultOptions, genericEncode)
 import Krestia.Phonotactics (isValidWord)
 import Krestia.Utils (Error(..))
 import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, prefixToPostfix, suffixes, usesPredicativeIdentity)
@@ -25,15 +27,18 @@ type DecomposeResult = Tuple (List DecomposeStep) String
 
 data DecomposeStep
    = BaseStep WordType
-   | SecondaryStep Inflection (List WordType)
+   | SecondaryStep Inflection (Array WordType)
 
 derive instance genericDecomposeStep :: Generic DecomposeStep _
+
+instance encodeDecomposeStep :: Encode DecomposeStep where
+   encode = genericEncode defaultOptions
 
 instance showDecomposeStep :: Show DecomposeStep where
    show = genericShow
 
 data DecomposedWord = DecomposedWord
-   { steps :: List Inflection
+   { steps :: Array Inflection
    , baseType :: WordType
    , baseWord :: String
    }
@@ -43,6 +48,9 @@ derive instance genericDecomposedWord :: Generic DecomposedWord _
 
 instance showDecomposedWord :: Show DecomposedWord where
    show = genericShow
+
+instance encodeDecomposedWord :: Encode DecomposedWord where
+   encode = genericEncode defaultOptions
 
 apply :: forall a. Decomposer a -> String -> Either Error (Tuple a String)
 apply (Decomposer f) = f
@@ -122,7 +130,7 @@ decomposePI = Decomposer f where
       case find (\(Tuple wordtype suffixes) -> any ((flip endsWith) word) suffixes)
          predicativeIdentitySuffixes of
          Just (Tuple wordtype _) ->
-            Right (Tuple (SecondaryStep PredicativeIdentity (singleton wordtype))
+            Right (Tuple (SecondaryStep PredicativeIdentity [wordtype])
                (predicativeToDefinite word))
          Nothing -> Left (InvalidInflectionError word "Cannot read predicative identity")
 
@@ -141,12 +149,12 @@ decomposePostfixed = Decomposer f where
          Tuple base _ <- apply readBaseWord remainingWord
          case base of
             BaseStep wt | wt == CountableAssociativeNoun || wt == UncountableAssociativeNoun ->
-               pure (Tuple (SecondaryStep Postfixed (singleton next)) remainingWord)
+               pure (Tuple (SecondaryStep Postfixed [next]) remainingWord)
             _ -> unsafeCrashWith "Undefined"
       | endsWith "r" word = do
          let remainingWord = prefixToPostfix word
          Tuple base _ <- apply readBaseWord remainingWord
-         pure (Tuple (SecondaryStep Postfixed (singleton Modifier)) remainingWord)
+         pure (Tuple (SecondaryStep Postfixed [Modifier]) remainingWord)
       | otherwise =
          Left (InvalidInflectionError word "Cannot read Postfixed")
 
@@ -247,4 +255,4 @@ decompose word = do
       baseStep = case unsafePartial (last steps) of
          BaseStep wt -> wt
          _ -> unsafeCrashWith "Undefined"
-   pure (DecomposedWord {steps: inflections, baseType: baseStep, baseWord: baseWord})
+   pure (DecomposedWord {steps: (L.toUnfoldable inflections), baseType: baseStep, baseWord: baseWord})

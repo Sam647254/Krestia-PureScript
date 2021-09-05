@@ -7,7 +7,6 @@ import Data.Array.Partial (tail)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.List (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), split)
 import Data.String.CodeUnits (toCharArray)
@@ -55,7 +54,7 @@ loadWord line = do
       parts = split (Pattern "|") line
       word = parts `index` 0
    DecomposedWord decomposedWord <- decompose word
-   if length decomposedWord.steps > 1 then
+   if A.length decomposedWord.steps > 1 then
       Left (Other (word <> " is not a dictionary word"))
    else do
       let
