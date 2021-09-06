@@ -3,10 +3,12 @@ module Krestia.Dictionary where
 import Prelude
 
 import Data.Array (concatMap, length, unsafeIndex) as A
+import Data.Array (elem, filter)
 import Data.Array.Partial (tail)
-import Data.Either (Either(..))
+import Data.Either (Either(..), fromRight)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Map (Map, fromFoldable)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), split)
 import Data.String.CodeUnits (toCharArray)
@@ -15,7 +17,7 @@ import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Krestia.Decomposition (DecomposedWord(..), decompose, isVerb)
 import Krestia.Utils (Error(..))
-import Krestia.WordTypes (Inflection(..), WordType(..))
+import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), suffixes)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
 data DictionaryWord = DictionaryWord
@@ -35,7 +37,9 @@ instance showDictionaryWord :: Show DictionaryWord where
   show = genericShow
 
 data Dictionary = Dictionary
-   { words :: Array DictionaryWord }
+   { words :: Array DictionaryWord
+   , index :: Map String DictionaryWord
+   }
 
 derive instance genericDictionary :: Generic Dictionary _
 
@@ -46,7 +50,13 @@ loadDictionary :: String -> Either Error Dictionary
 loadDictionary contents = do
    let dictionaryLines = lines contents
    traverse loadWord dictionaryLines
-      # map (\words -> (Dictionary {words: words}))
+      # map (\words ->
+         Dictionary
+            { words: words
+            , index: map (\(DictionaryWord word) ->
+               Tuple word.word (DictionaryWord word)) words
+               # fromFoldable
+            })
 
 loadWord :: String -> Either Error DictionaryWord
 loadWord line = do
@@ -147,3 +157,17 @@ toInflection i = case i of
 
 index :: forall a. Array a -> Int -> a
 index array i = unsafePartial (A.unsafeIndex array i)
+
+wordTypeOf :: DictionaryWord -> WordType
+wordTypeOf (DictionaryWord word) =
+   let (DecomposedWord decomposedWord) = unsafePartial (fromRight (decompose word.word)) in
+   decomposedWord.baseType
+
+inflectedFormsOf :: DictionaryWord -> Map Inflection String
+inflectedFormsOf (DictionaryWord word) =
+   let
+      wordtype = wordTypeOf (DictionaryWord word)
+      applicableSuffixes = filter (\(WI s i types) -> wordtype `elem` types) suffixes
+      entries = map (\(WI s i _) -> Tuple i (word.word <> s)) applicableSuffixes
+   in
+   fromFoldable entries

@@ -90,6 +90,7 @@ data Inflection
    | Predicate
 
 derive instance eqInflection :: Eq Inflection
+derive instance ordInflection :: Ord Inflection
 derive instance genericInflection :: Generic Inflection _
 
 instance showInflection :: Show Inflection where
