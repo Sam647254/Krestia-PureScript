@@ -2,172 +2,118 @@ module Krestia.Dictionary where
 
 import Prelude
 
-import Data.Array (concatMap, length, unsafeIndex) as A
-import Data.Array (elem, filter)
-import Data.Array.Partial (tail)
-import Data.Either (Either(..), fromRight)
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Map (Map, fromFoldable)
-import Data.Maybe (Maybe(..))
-import Data.String (Pattern(..), split)
-import Data.String.CodeUnits (toCharArray)
-import Data.String.Utils (lines)
-import Data.Traversable (traverse)
-import Data.Tuple (Tuple(..))
-import Krestia.Decomposition (DecomposedWord(..), decompose, isVerb)
-import Krestia.Utils (Error(..))
-import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), suffixes)
-import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Data.Maybe (Maybe)
+import Data.String (splitAt, toUpper)
+import Effect (Effect)
+import Foreign.Generic (class Decode, F, Options, decodeJSON, defaultOptions, genericDecode)
+import Node.Encoding (Encoding(..))
+import Node.FS.Sync (readTextFile)
+import Partial.Unsafe (unsafeCrashWith)
 
-data DictionaryWord = DictionaryWord
-   { word :: String
-   , meaning :: String
-   , glossMeaning :: String
-   , roots :: Array String
-   , notes :: Maybe String
-   , slotMeanings :: Maybe (Array String)
-   , modifies :: Maybe (Array WordType)
-   , attachments :: Maybe (Array Inflection)
+normalizeField :: String -> String
+normalizeField name =
+   let { before, after } = splitAt 1 name in
+   (toUpper before) <> after
+
+data Substantivo = Substantivo
+   { vorto :: String
+   , signifo :: String
+   , gloso :: String
+   , radikoj :: Array String
+   , noto :: Maybe String
+   , plenaFormo :: Maybe String
    }
 
-derive instance genericDictionaryWord :: Generic DictionaryWord _
+decodeOptions :: Options
+decodeOptions = defaultOptions { fieldTransform = normalizeField, unwrapSingleConstructors = true }
 
-instance showDictionaryWord :: Show DictionaryWord where
-  show = genericShow
+derive instance genericSubstantivo :: Generic Substantivo _
 
-data Dictionary = Dictionary
-   { words :: Array DictionaryWord
-   , index :: Map String DictionaryWord
-   }
-
-derive instance genericDictionary :: Generic Dictionary _
-
-instance showDictionary :: Show Dictionary where
+instance showSubstantivo :: Show Substantivo where
    show = genericShow
 
-loadDictionary :: String -> Either Error Dictionary
-loadDictionary contents = do
-   let dictionaryLines = lines contents
-   traverse loadWord dictionaryLines
-      # map (\words ->
-         Dictionary
-            { words: words
-            , index: map (\(DictionaryWord word) ->
-               Tuple word.word (DictionaryWord word)) words
-               # fromFoldable
-            })
+instance decodeSubstantivo :: Decode Substantivo where
+   decode = genericDecode decodeOptions
 
-loadWord :: String -> Either Error DictionaryWord
-loadWord line = do
-   let
-      parts = split (Pattern "|") line
-      word = parts `index` 0
-   DecomposedWord decomposedWord <- decompose word
-   if A.length decomposedWord.steps > 1 then
-      Left (Other (word <> " is not a dictionary word"))
-   else do
-      let
-         Tuple meaning slots =
-            if isVerb (DecomposedWord decomposedWord) then
-               let meaningParts = split (Pattern "^") (parts `index` 1) in
-               Tuple (meaningParts `index` 0) (Just (unsafePartial (tail meaningParts)))
-            else
-               Tuple (parts `index` 1) Nothing
-         glossMeaning = parts `index` 2
-         roots = if (parts `index` 3) == "" then [] else split (Pattern ",") (parts `index` 3)
-         notes = if (parts `index` 4) == "" then Nothing else Just (parts `index` 4)
-         modifies =
-            if A.length parts >= 6 then
-               Just (map toWordtype (toCharArray (parts `index` 5)))
-            else
-               Nothing
-         attachments =
-            if A.length parts == 7 then
-               Just (A.concatMap toInflection (toCharArray (parts `index` 6)))
-            else
-               Nothing
-      pure (DictionaryWord
-         { word: word
-         , meaning: meaning
-         , glossMeaning: glossMeaning
-         , roots: roots
-         , notes: notes
-         , slotMeanings: slots
-         , modifies: modifies
-         , attachments: attachments
-         })
+data Verbo = Verbo 
+   { vorto :: String
+   , signifo :: String
+   , gloso :: String
+   , radikoj :: Array String
+   , noto :: Maybe String
+   , plenaFormo :: Maybe String
+   , argumentajNotoj :: Array (Maybe String)
+   , frazaSignifo :: String
+   }
 
-toWordtype :: Char -> WordType
-toWordtype t = case t of
-   'N' -> CountableNoun
-   'n' -> UncountableNoun
-   '0' -> Verb0
-   '1' -> Verb1
-   '2' -> Verb12
-   '3' -> Verb123
-   '4' -> Verb2
-   '5' -> Verb23
-   '6' -> Verb3
-   '7' -> Verb13
-   'L' -> Record
-   'E' -> CountableAssociativeNoun
-   'P' -> UncountableAssociativeNoun
-   'Q' -> Placeholder
-   'F' -> Name
-   'C' -> TerminalDigit
-   'c' -> NonterminalDigit
-   _ -> unsafeCrashWith ("Unknown word type: " <> (show t))
+derive instance genericVerbo :: Generic Verbo _
 
-toInflection :: Char -> Array Inflection
-toInflection i = case i of
-   'D' -> [Definite]
-   'H' -> [Possession]
-   'P' -> [Progressive]
-   'p' -> [Perfect]
-   'I' -> [Intention]
-   'd' -> [Desiderative]
-   'E' -> [PredicativeIdentity]
-   'A' -> [AttributiveIdentityPrefix, AttributiveIdentityPostfix]
-   'h' -> [Possession, Possessive0]
-   'i' -> [Imperative]
-   '1' -> [Argument1]
-   '2' -> [Argument2]
-   '3' -> [Argument3]
-   'e' -> [Existence]
-   't' -> [Hortative]
-   'T' -> [Translative, Translative0]
-   'Ĝ' -> [Gerund]
-   'ĝ' -> [SpecificGerund]
-   'U' -> [Partial1]
-   'J' -> [Partial2]
-   'O' -> [Partial3]
-   'S' -> [SingleForm]
-   'R' -> [Reflection, Reflection0, Reflection1, Reflection3]
-   '4' -> [Shift2]
-   '5' -> [Shift3]
-   'o' -> [Optative]
-   'K' -> [Quality]
-   'n' -> [Hypothetical]
-   'X' -> [Detached]
-   '@' -> [NameI]
-   'C' -> [DigitI]
-   '&' -> [Predicate]
-   _ -> unsafeCrashWith ("Unknown inflection: " <> (show i))
+instance showVerbo :: Show Verbo where
+   show = genericShow
 
-index :: forall a. Array a -> Int -> a
-index array i = unsafePartial (A.unsafeIndex array i)
+instance decodeVerbo :: Decode Verbo where
+   decode = genericDecode decodeOptions
 
-wordTypeOf :: DictionaryWord -> WordType
-wordTypeOf (DictionaryWord word) =
-   let (DecomposedWord decomposedWord) = unsafePartial (fromRight (decompose word.word)) in
-   decomposedWord.baseType
+data Modifanto = Modifanto
+   { vorto :: String
+   , signifo :: String
+   , gloso :: String
+   , radikoj :: Array String
+   , noto :: Maybe String
+   , modifeblajTipoj :: Array String
+   , aldonaĵajTipoj :: Array String
+   , aldonaĵajNotoj :: Array (Maybe String)
+   }
 
-inflectedFormsOf :: DictionaryWord -> Map Inflection String
-inflectedFormsOf (DictionaryWord word) =
-   let
-      wordtype = wordTypeOf (DictionaryWord word)
-      applicableSuffixes = filter (\(WI s i types) -> wordtype `elem` types) suffixes
-      entries = map (\(WI s i _) -> Tuple i (word.word <> s)) applicableSuffixes
-   in
-   fromFoldable entries
+derive instance genericModifanto :: Generic Modifanto _
+
+instance showModifanto :: Show Modifanto where
+   show = genericShow
+
+instance decodeModifanto :: Decode Modifanto where
+   decode = genericDecode decodeOptions
+
+data SpecialaVorto = SpecialaVorto
+   { vorto :: String
+   , signifo :: String
+   , gloso :: String
+   , radikoj :: Array String
+   , noto :: Maybe String
+   }
+
+derive instance genericSpecialaVorto :: Generic SpecialaVorto _
+
+instance showSpecialaVorto :: Show SpecialaVorto where
+   show = genericShow
+
+instance decodeSpecialaVorto :: Decode SpecialaVorto where
+   decode = genericDecode decodeOptions
+
+data JsonVortaro = JsonVortaro
+   { substantivoj :: Array Substantivo
+   , verboj :: Array Verbo
+   , modifantoj :: Array Modifanto
+   , specialajVortoj :: Array SpecialaVorto
+   }
+
+derive instance genericJsonVortaro :: Generic JsonVortaro _
+
+instance showJsonVortaro :: Show JsonVortaro where
+   show = genericShow
+
+instance decodeJsonVortaro :: Decode JsonVortaro where
+   decode = genericDecode decodeOptions
+
+loadDictionary :: String -> F JsonVortaro
+loadDictionary = decodeJSON
+
+testLoadDictionary :: Effect JsonVortaro
+testLoadDictionary = do
+   text <- readTextFile UTF8 "novaVortaro.json"
+   case runExcept (loadDictionary text) of
+      Left errors -> unsafeCrashWith (show errors)
+      Right dictionary -> pure dictionary
