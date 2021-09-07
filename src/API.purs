@@ -2,15 +2,17 @@ module Krestia.API where
 
 import Prelude
 
-import Data.Either (fromRight)
+import Data.Either (Either(..), fromRight)
 import Data.Generic.Rep (class Generic)
-import Data.Map (lookup, toUnfoldable)
+import Data.List as L
+import Data.Map (filter, lookup, toUnfoldable, values)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
-import Data.String.Utils (startsWith)
+import Data.String.Utils (startsWith, words)
 import Data.Tuple (Tuple(..))
 import Foreign.Generic (class Encode, defaultOptions, genericEncode)
 import Foreign.Object (Object, fromFoldable)
+import Krestia.Decomposition (DecomposedWord(..), decompose)
 import Krestia.Dictionary (DictionaryIndex(..), DictionaryWord(..), Modifanto(..), Verbo(..), getGlossFromDictionaryWord, getMeaningfromDictionaryWord, getRootsFromDictionaryWord, getWordFromDictionaryWord, inflectedFormsOf, wordTypeOf)
 import Krestia.Phonotactics (splitIntoSyllables)
 import Krestia.WordTypes (WordType, Inflection)
@@ -98,8 +100,38 @@ derive instance genericSearchResult :: Generic SearchResult _
 instance encodeSearchResult :: Encode SearchResult where
    encode = genericEncode defaultOptions
 
-relevanceOf :: WordMeaning -> String -> Int
-relevanceOf (WordMeaning result) query =
+search :: DictionaryIndex -> String -> SearchResult
+search (DictionaryIndex index) query =
+   let
+      queryWords = words query
+      searchResults =
+         filter (\entry -> contains (Pattern query) (getWordFromDictionaryWord entry) ||
+            contains (Pattern query) (getMeaningfromDictionaryWord entry)) index
+            # values
+            # map (\result -> WordMeaning {word: getWordFromDictionaryWord result,
+               meaning: getMeaningfromDictionaryWord result})
+      Tuple decomposedWord inflectionSteps =
+         case queryWords of
+         [word] ->
+            let decomposedWord = decompose word in
+            case decomposedWord of
+               Right (DecomposedWord validWord) ->
+                  Tuple (Just validWord.baseWord) (Just (map show validWord.steps))
+               Left _ ->
+                  Tuple Nothing Nothing
+         _ -> Tuple Nothing Nothing
+   in
+   SearchResult
+      { decomposedWord
+      , fullWord: Nothing
+      , results: L.toUnfoldable searchResults
+      , glossResults: Nothing
+      , inflectionSteps
+      , numberResult: Nothing
+      }
+
+relevanceOf :: String -> WordMeaning -> Int
+relevanceOf query (WordMeaning result) =
    if query == result.word then
       0
    else if startsWith query result.word then

@@ -7,7 +7,7 @@ import Data.Newtype (wrap)
 import Effect (Effect)
 import Effect.Console (log)
 import Foreign.Generic (encode)
-import Krestia.API (findWord)
+import Krestia.API (findWord, search)
 import Krestia.Decomposition (DecomposedWord, decompose)
 import Krestia.Dictionary (DictionaryIndex, testLoadDictionary)
 import Krestia.Utils (EncodableEither, Error)
@@ -39,12 +39,22 @@ wordHandler index = do
             Just w ->
                send (encode w)
 
+queryHandler :: DictionaryIndex -> Handler
+queryHandler index = do
+   query <- getRouteParam "query"
+   case query of
+      Nothing -> do
+         setStatus 400
+         send {error: "No query given"}
+      Just q -> do
+         send (encode (search index q))
+
 appSetup :: DictionaryIndex -> App
 appSetup index = do
    use (static "/public")
    get "/test" (sendJson (encode (wrap (decompose "vilka") :: EncodableEither Error DecomposedWord)))
    get "/api/word/:word" (wordHandler index)
-   get "/api/search/:query" todo
+   get "/api/search/:query" (queryHandler index)
    get "/api/alphabetical" todo
    get "/api/types" todo
 
