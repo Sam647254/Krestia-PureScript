@@ -6,6 +6,8 @@ import Data.Either (fromRight)
 import Data.Generic.Rep (class Generic)
 import Data.Map (lookup, toUnfoldable)
 import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), contains)
+import Data.String.Utils (startsWith)
 import Data.Tuple (Tuple(..))
 import Foreign.Generic (class Encode, defaultOptions, genericEncode)
 import Foreign.Object (Object, fromFoldable)
@@ -59,3 +61,54 @@ findWord (DictionaryIndex dIndex) query = do
          ModifierWord (Modifanto modifanto) -> Just modifanto.aldonaĵajTipoj
          _ -> Nothing
       })
+
+data WordMeaning = WordMeaning
+   { word :: String
+   , meaning :: String
+   }
+
+derive instance genericWordMeaning :: Generic WordMeaning _
+
+instance encodeWordMeaning :: Encode WordMeaning where
+   encode = genericEncode defaultOptions
+
+data GlossResult = GlossResult
+   { word :: String
+   , baseWord :: String
+   , glossMeaning :: String
+   , inflectionSteps :: Array String
+   }
+
+derive instance genericGlossResult :: Generic GlossResult _
+
+instance encodeGlossResult :: Encode GlossResult where
+   encode = genericEncode defaultOptions
+
+data SearchResult = SearchResult
+   { decomposedWord :: Maybe String
+   , fullWord :: Maybe String
+   , results :: Array WordMeaning
+   , glossResults :: Maybe (Array GlossResult)
+   , inflectionSteps :: Maybe (Array String)
+   , numberResult :: Maybe Number
+   }
+
+derive instance genericSearchResult :: Generic SearchResult _
+
+instance encodeSearchResult :: Encode SearchResult where
+   encode = genericEncode defaultOptions
+
+relevanceOf :: WordMeaning -> String -> Int
+relevanceOf (WordMeaning result) query =
+   if query == result.word then
+      0
+   else if startsWith query result.word then
+      1
+   else if query == result.meaning then
+      2
+   else if startsWith query result.meaning then
+      3
+   else if contains (Pattern query) result.meaning then
+      4
+   else
+      100
