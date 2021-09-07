@@ -111,7 +111,7 @@ suffixes =
    , WI "rem" Possessive0 [CountableNoun, UncountableNoun]
    , WI "res" Possessive [CountableNoun, UncountableNoun]
    , WI "rim" Existence [CountableNoun, UncountableNoun]
-   , WI "lam" Translative [CountableNoun, UncountableNoun]
+   , WI "lam" Translative0 [CountableNoun, UncountableNoun]
    , WI "las" Translative [CountableNoun, UncountableNoun]
    
    , WI "io" Perfect [Verb0, Verb2, Verb3, Verb23]

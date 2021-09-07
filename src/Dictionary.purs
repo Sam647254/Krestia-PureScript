@@ -124,12 +124,28 @@ instance decodeJsonVortaro :: Decode JsonVortaro where
 loadDictionary :: String -> F JsonVortaro
 loadDictionary = decodeJSON
 
-testLoadDictionary :: Effect JsonVortaro
+testLoadDictionary :: Effect DictionaryIndex
 testLoadDictionary = do
    text <- readTextFile UTF8 "novaVortaro.json"
-   case runExcept (loadDictionary text) of
-      Left errors -> unsafeCrashWith (show errors)
-      Right dictionary -> pure dictionary
+   let
+      dictionary =
+         case runExcept (loadDictionary text) of
+            Left errors -> unsafeCrashWith (show errors)
+            Right d -> d
+   pure (buildIndex dictionary)
+
+buildIndex :: JsonVortaro -> DictionaryIndex
+buildIndex (JsonVortaro vortaro) =
+   let
+      entries =
+         (map (\(Substantivo noun) -> Tuple noun.vorto (Noun (Substantivo noun))) vortaro.substantivoj) <>
+         (map (\(Verbo verb) -> Tuple verb.vorto (Verb (Verbo verb))) vortaro.verboj) <>
+         (map (\(Modifanto modifier) ->
+            Tuple modifier.vorto (ModifierWord (Modifanto modifier))) vortaro.modifantoj) <>
+         (map (\(SpecialaVorto specialWord) -> Tuple specialWord.vorto (SpecialWord (SpecialaVorto specialWord)))
+            vortaro.specialajVortoj)
+   in
+   DictionaryIndex (fromFoldable entries)
 
 toWordtype :: Char -> WordType
 toWordtype t = case t of
