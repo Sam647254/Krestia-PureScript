@@ -3,7 +3,7 @@ module Krestia.Decomposition where
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Array (any, elem, find, toUnfoldable)
+import Data.Array (any, elem, toUnfoldable)
 import Data.Either (Either(..))
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
@@ -18,7 +18,7 @@ import Data.Tuple (Tuple(..))
 import Foreign.Generic (class Encode, defaultOptions, genericEncode)
 import Krestia.Phonotactics (isValidWord)
 import Krestia.Utils (Error(..))
-import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeIdentitySuffixes, predicativeToDefinite, prefixToPostfix, suffixes, usesPredicativeIdentity)
+import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behavesLike, predicativeToDefinite, prefixToPostfix, suffixes, usesPredicativeIdentity)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
 newtype Decomposer a = Decomposer (String -> Either Error (Tuple a String))
@@ -127,12 +127,13 @@ decomposePI :: Decomposer DecomposeStep
 decomposePI = Decomposer f where
    f "" = Left (Other "Empty string")
    f word = do
-      case find (\(Tuple wordtype suffixes) -> any ((flip endsWith) word) suffixes)
-         predicativeIdentitySuffixes of
-         Just (Tuple wordtype _) ->
-            Right (Tuple (SecondaryStep PredicativeIdentity [wordtype])
-               (predicativeToDefinite word))
+      case predicativeToDefinite word of
          Nothing -> Left (InvalidInflectionError word "Cannot read predicative identity")
+         Just definite -> do
+            _ <- fullyDecompose [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+               UncountableAssociativeNoun] definite
+            Right (Tuple (SecondaryStep PredicativeIdentity [CountableNoun])
+               definite)
 
 decomposePostfixed :: Decomposer DecomposeStep
 decomposePostfixed = Decomposer f where

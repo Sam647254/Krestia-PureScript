@@ -103,16 +103,28 @@ data WI = WI String Inflection (Array WordType)
 
 suffixes :: Array WI
 suffixes =
-   [ WI "va" AttributiveIdentityPrefix [CountableNoun, UncountableNoun]
-   , WI "ga" AttributiveIdentityPostfix [CountableNoun, UncountableNoun]
-   , WI "vra" SpecificGerund [CountableNoun, UncountableNoun]
-   , WI "re" Quality [CountableNoun, UncountableNoun]
-   , WI "ra" Lone [CountableNoun, UncountableNoun]
-   , WI "rem" Possessive0 [CountableNoun, UncountableNoun]
-   , WI "res" Possessive [CountableNoun, UncountableNoun]
-   , WI "rim" Existence [CountableNoun, UncountableNoun]
-   , WI "lam" Translative0 [CountableNoun, UncountableNoun]
-   , WI "las" Translative [CountableNoun, UncountableNoun]
+   [ WI "nsa" Possession [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "va" AttributiveIdentityPrefix [CountableNoun, UncountableNoun,
+      CountableAssociativeNoun, UncountableAssociativeNoun]
+   , WI "ga" AttributiveIdentityPostfix [CountableNoun, UncountableNoun,
+      CountableAssociativeNoun, UncountableAssociativeNoun]
+   , WI "vra" SpecificGerund [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "re" Quality [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "ra" Lone [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "rem" Possessive0 [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "res" Possessive [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "rim" Existence [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "lam" Translative0 [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
+   , WI "las" Translative [CountableNoun, UncountableNoun, CountableAssociativeNoun,
+      UncountableAssociativeNoun]
    
    , WI "io" Perfect [Verb0, Verb2, Verb3, Verb23]
    , WI "ia" Hypothetical [Verb0, Verb2, Verb3, Verb23]
@@ -190,13 +202,13 @@ predicativeIdentitySuffixes =
    , Tuple UncountableAssociativeNoun ["gro", "gru"]
    ]
 
-predicativeToDefinite :: String -> String
+predicativeToDefinite :: String -> Maybe String
 predicativeToDefinite noun =
    case reverse $ Array.toUnfoldable $ toCharArray noun of
-      ('a' : 'a' : r) -> fromCharArray $ toUnfoldable $ reverse ('a' : r)
-      ('o' : r) -> fromCharArray $ toUnfoldable $ reverse ('e' : r)
-      ('u' : r) -> fromCharArray $ toUnfoldable $ reverse ('i' : r)
-      _ -> unsafeCrashWith ("Invalid noun: " <> noun)
+      ('a' : 'a' : r) -> Just (fromCharArray $ toUnfoldable $ reverse ('a' : r))
+      ('o' : r) -> Just (fromCharArray $ toUnfoldable $ reverse ('e' : r))
+      ('u' : r) -> Just (fromCharArray $ toUnfoldable $ reverse ('i' : r))
+      _ -> Nothing
 
 prefixToPostfix :: String -> String
 prefixToPostfix anoun =
