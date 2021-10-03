@@ -10,13 +10,16 @@ import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Data.String.Utils (startsWith, words)
 import Data.Tuple (Tuple(..))
-import Foreign.Generic (class Encode, defaultOptions, genericEncode)
+import Foreign.Generic (class Encode, Options, defaultOptions, genericEncode)
 import Foreign.Object (Object, fromFoldable)
 import Krestia.Decomposition (DecomposedWord(..), decompose)
 import Krestia.Dictionary (DictionaryIndex(..), DictionaryWord(..), Modifanto(..), Verbo(..), getGlossFromDictionaryWord, getMeaningfromDictionaryWord, getRootsFromDictionaryWord, getWordFromDictionaryWord, inflectedFormsOf, wordTypeOf)
 import Krestia.Phonotactics (splitIntoSyllables)
 import Krestia.WordTypes (WordType, Inflection)
 import Partial.Unsafe (unsafePartial)
+
+encodeOptions :: Options
+encodeOptions = defaultOptions { unwrapSingleConstructors = true }
 
 data WordResponse = WordResponse
    { word :: String
@@ -34,7 +37,7 @@ data WordResponse = WordResponse
 derive instance genericWordResponse :: Generic WordResponse _
 
 instance encodeWordResponse :: Encode WordResponse where
-   encode = genericEncode defaultOptions
+   encode = genericEncode encodeOptions
 
 findWord :: DictionaryIndex -> String -> Maybe WordResponse
 findWord (DictionaryIndex dIndex) query = do
@@ -72,7 +75,7 @@ data WordMeaning = WordMeaning
 derive instance genericWordMeaning :: Generic WordMeaning _
 
 instance encodeWordMeaning :: Encode WordMeaning where
-   encode = genericEncode defaultOptions
+   encode = genericEncode encodeOptions
 
 data GlossResult = GlossResult
    { word :: String
@@ -84,7 +87,7 @@ data GlossResult = GlossResult
 derive instance genericGlossResult :: Generic GlossResult _
 
 instance encodeGlossResult :: Encode GlossResult where
-   encode = genericEncode defaultOptions
+   encode = genericEncode encodeOptions
 
 data SearchResult = SearchResult
    { decomposedWord :: Maybe String
@@ -98,7 +101,7 @@ data SearchResult = SearchResult
 derive instance genericSearchResult :: Generic SearchResult _
 
 instance encodeSearchResult :: Encode SearchResult where
-   encode = genericEncode defaultOptions
+   encode = genericEncode encodeOptions
 
 search :: DictionaryIndex -> String -> SearchResult
 search (DictionaryIndex index) query =
