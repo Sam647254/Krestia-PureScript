@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 
 import Effect (Effect)
-import Test.DecomposeSpec as D
+import Test.MonadicDecomposeSpec as D
 import PhonotacticsSpec as P
 import Test.Unit.Main (runTest)
 

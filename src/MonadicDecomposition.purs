@@ -6,15 +6,14 @@ import Control.Alt ((<|>))
 import Control.Monad.State (StateT, get, lift, put, runStateT)
 import Control.MonadZero (guard)
 import Data.Array (any, catMaybes, concat, elem, fromFoldable, head)
-import Data.Foldable (oneOf)
-import Data.List (List(..), many, null, (:))
+import Data.List (List(..), null, (:))
 import Data.Maybe (Maybe, fromMaybe, isJust)
 import Data.String (length, take, toUpper)
 import Data.String.Utils (endsWith)
 import Data.Tuple (Tuple(..), fst)
 import Krestia.Decomposition (DecomposedWord(..), isNonterminalDigit, isTerminalDigit)
 import Krestia.Phonotactics (isValidWord)
-import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behaviourOf, canUsePI, predicativeToDefinite, prefixToPostfix, suffixes)
+import Krestia.WordTypes (Inflection(..), WI(..), WordType(..), baseTypeOf, behaviourOf, canBePostfixed, canUsePI, predicativeToDefinite, prefixToPostfix, suffixes)
 import Partial.Unsafe (unsafeCrashWith)
 
 -- Types
@@ -53,7 +52,7 @@ readBaseType wordType typeGuard = do
 
 isAssociativePostfixed :: String -> Boolean
 isAssociativePostfixed word =
-   any ((flip endsWith) word) ["dri", "gri", "dru", "gru"] || endsWith "r" word
+   any (_ `endsWith` word) ["dri", "gri", "dru", "gru"] || endsWith "r" word
 
 isPI :: String -> Boolean
 isPI = predicativeToDefinite >>> isJust
@@ -133,14 +132,6 @@ readBaseWord = do
    baseType <- lift (baseTypeOf word)
    put ""
    pure baseType
-
-readCommonWord :: DecompositionT (Tuple (List Inflection) WordType)
-readCommonWord = (do
-   inflections <- many (oneOf validInflections <|> readPostfixed <|> readPI)
-   baseWordType <- readBaseWord
-   pure (Tuple inflections baseWordType)) <|> (do
-      baseWord <- readBaseWord
-      pure (Tuple Nil baseWord))
 
 -- Runners
 

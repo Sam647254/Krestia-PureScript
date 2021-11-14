@@ -272,8 +272,11 @@ behavesLike _ _ = false
 
 -- TODO: Finish this list
 behaviourOf :: WordType -> Inflection -> Maybe (Tuple WordType Boolean)
+behaviourOf Verb12 Argument1 = Just (Tuple CountableNoun false)
 behaviourOf Verb12 Argument2 = Just (Tuple CountableNoun false)
+behaviourOf noun Possessive | canUsePI noun = Just (Tuple Verb1 false)
 behaviourOf verb Perfect | isVerbType verb = Just (Tuple verb true)
+behaviourOf wordtype Postfixed | canBePostfixed wordtype = Just (Tuple wordtype false)
 behaviourOf _ _ = Nothing
 
 usesPredicativeIdentity :: Inflection -> Maybe Inflection
@@ -284,10 +287,18 @@ isVerbType :: WordType -> Boolean
 isVerbType wordType = wordType `elem` [Verb0, Verb1, Verb2, Verb3, Verb12, Verb13, Verb23, Verb123]
 
 canUsePI :: WordType -> Boolean
-canUsePI wordType =
-   elem wordType
+canUsePI =
+   (_ `elem`
       [ CountableNoun
       , UncountableNoun
       , CountableAssociativeNoun
       , UncountableAssociativeNoun
-      ]
+      ])
+
+canBePostfixed :: WordType -> Boolean
+canBePostfixed =
+   (_ `elem`
+      [ Modifier
+      , CountableAssociativeNoun
+      , UncountableAssociativeNoun
+      ])
