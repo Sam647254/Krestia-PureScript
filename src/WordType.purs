@@ -3,13 +3,13 @@ module Krestia.WordTypes where
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Array (find, sortWith)
+import Data.Array (elem, find)
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List (reverse, toUnfoldable, (:))
 import Data.Maybe (Maybe(..))
-import Data.String (length)
+
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.String.Utils (endsWith)
 import Data.Tuple (Tuple(..))
@@ -171,8 +171,6 @@ suffixes =
    , WI "rosh" Shift3 [Verb13]
    , WI "riv" Shift3 [Verb23]
    ]
-   # sortWith (\(WI suffix _ _) -> length suffix)
-   # Array.reverse
 
 countableNounSuffixes :: Array String
 countableNounSuffixes =
@@ -272,6 +270,24 @@ behavesLike (Tuple Shift2 vt) vt2 = vt == vt2
 behavesLike (Tuple Shift3 vt) vt2 = vt == vt2
 behavesLike _ _ = false
 
+-- TODO: Finish this list
+behaviourOf :: WordType -> Inflection -> Maybe (Tuple WordType Boolean)
+behaviourOf Verb12 Argument2 = Just (Tuple CountableNoun false)
+behaviourOf verb Perfect | isVerbType verb = Just (Tuple verb true)
+behaviourOf _ _ = Nothing
+
 usesPredicativeIdentity :: Inflection -> Maybe Inflection
 usesPredicativeIdentity SpecificGerund = Just Gerund
 usesPredicativeIdentity _ = Nothing
+
+isVerbType :: WordType -> Boolean
+isVerbType wordType = wordType `elem` [Verb0, Verb1, Verb2, Verb3, Verb12, Verb13, Verb23, Verb123]
+
+canUsePI :: WordType -> Boolean
+canUsePI wordType =
+   elem wordType
+      [ CountableNoun
+      , UncountableNoun
+      , CountableAssociativeNoun
+      , UncountableAssociativeNoun
+      ]
