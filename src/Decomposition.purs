@@ -136,28 +136,34 @@ decomposePI = Decomposer f where
                definite)
 
 decomposePostfixed :: Decomposer DecomposeStep
-decomposePostfixed = Decomposer f where
-   f "" = Left (Other "Empty string")
-   f word
-      | any ((flip endsWith) word) ["dri", "gri", "dru", "gru"] = do
-         let
-            remainingWord = prefixToPostfix word
-            next =
-               if endsWith "dri" word || endsWith "dru" word then
-                  CountableAssociativeNoun
-               else
-                  UncountableAssociativeNoun
-         Tuple base _ <- apply readBaseWord remainingWord
-         case base of
-            BaseStep wt | wt == CountableAssociativeNoun || wt == UncountableAssociativeNoun ->
-               pure (Tuple (SecondaryStep Postfixed [next]) remainingWord)
-            _ -> unsafeCrashWith "Undefined"
-      | endsWith "r" word = do
-         let remainingWord = prefixToPostfix word
-         Tuple base _ <- apply readBaseWord remainingWord
-         pure (Tuple (SecondaryStep Postfixed [Modifier]) remainingWord)
-      | otherwise =
-         Left (InvalidInflectionError word "Cannot read Postfixed")
+decomposePostfixed =
+   let
+      isAssociativePostfixed word =
+         any ((flip endsWith) word) ["dri", "gri", "dru", "gru"]
+      
+      decomposer "" = Left (Other "Empty string")
+      decomposer word
+         | isAssociativePostfixed word = do
+            let
+               remainingWord = prefixToPostfix word
+               next =
+                  if endsWith "dri" word || endsWith "dru" word then
+                     CountableAssociativeNoun
+                  else
+                     UncountableAssociativeNoun
+            Tuple base _ <- apply readBaseWord remainingWord
+            case base of
+               BaseStep wt | wt == CountableAssociativeNoun || wt == UncountableAssociativeNoun ->
+                  pure (Tuple (SecondaryStep Postfixed [next]) remainingWord)
+               _ -> unsafeCrashWith "Undefined"
+         | endsWith "r" word = do
+            let remainingWord = prefixToPostfix word
+            Tuple base _ <- apply readBaseWord remainingWord
+            pure (Tuple (SecondaryStep Postfixed [Modifier]) remainingWord)
+         | otherwise =
+            Left (InvalidInflectionError word "Cannot read Postfixed")
+   in
+   Decomposer decomposer
 
 readBaseWord :: Decomposer DecomposeStep
 readBaseWord = Decomposer f where

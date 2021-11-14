@@ -3,12 +3,13 @@ module Krestia.WordTypes where
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Array (find)
+import Data.Array (find, sortWith)
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List (reverse, toUnfoldable, (:))
 import Data.Maybe (Maybe(..))
+import Data.String (length)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.String.Utils (endsWith)
 import Data.Tuple (Tuple(..))
@@ -170,6 +171,8 @@ suffixes =
    , WI "rosh" Shift3 [Verb13]
    , WI "riv" Shift3 [Verb23]
    ]
+   # sortWith (\(WI suffix _ _) -> length suffix)
+   # Array.reverse
 
 countableNounSuffixes :: Array String
 countableNounSuffixes =
