@@ -75,18 +75,20 @@ isValidNextInflection wordType inflection =
                inflection == nextInflection && wordType `elem` validBaseTypes)
             suffixes
       validPI = inflection == PredicativeIdentity && (canUsePI wordType)
+      validPostfix = inflection == Postfixed && canBePostfixed wordType
    in
-   hasValidSuffix || validPI
-
-v :: WordType -> Inflection -> List Inflection -> Boolean
-v baseType inflection Nil = isValidNextInflection baseType inflection
-v baseType inflection (nextInflection : rest) = (do
-   (Tuple wordtype isTerminal) <- behaviourOf baseType inflection
-   guard (isValidNextInflection wordtype nextInflection && (not isTerminal || null rest))
-   pure (v wordtype nextInflection rest)) # fromMaybe false
+   hasValidSuffix || validPI || validPostfix
 
 validDerivation :: Tuple (List Inflection) String -> Maybe DecomposedWord
-validDerivation (Tuple inflections baseWord) = do
+validDerivation (Tuple inflections baseWord) =
+   let
+      v :: WordType -> Inflection -> List Inflection -> Boolean
+      v baseType inflection Nil = isValidNextInflection baseType inflection
+      v baseType inflection (nextInflection : rest) = (do
+         (Tuple wordtype isTerminal) <- behaviourOf baseType inflection
+         guard (isValidNextInflection wordtype nextInflection && (not isTerminal || null rest))
+         pure (v wordtype nextInflection rest)) # fromMaybe false
+   in do
    (Tuple baseType _) <- runBaseWord baseWord
    case inflections of
       Nil -> unsafeCrashWith "Invalid state"
@@ -129,6 +131,7 @@ readPI = do
 readBaseWord :: DecompositionT WordType
 readBaseWord = do
    word <- get
+   guard (isValidWord word)
    baseType <- lift (baseTypeOf word)
    put ""
    pure baseType
@@ -150,7 +153,7 @@ decompose :: String -> Maybe DecomposedWord
 decompose input =
    let
       addPreviousSteps :: List Inflection -> Tuple Inflection String -> Tuple (List Inflection) String
-      addPreviousSteps inflections (Tuple inflection word) = (Tuple (inflection : inflections) word)
+      addPreviousSteps inflections (Tuple inflection word) = Tuple (inflection : inflections) word
 
       runStep' :: Tuple (List Inflection) String -> Array (Tuple (List Inflection) String)
       runStep' (Tuple inflectionsSoFar remainingWord) =

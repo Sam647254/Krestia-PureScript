@@ -9,7 +9,6 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List (reverse, toUnfoldable, (:))
 import Data.Maybe (Maybe(..))
-
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.String.Utils (endsWith)
 import Data.Tuple (Tuple(..))
@@ -272,8 +271,26 @@ behavesLike _ _ = false
 
 -- TODO: Finish this list
 behaviourOf :: WordType -> Inflection -> Maybe (Tuple WordType Boolean)
+behaviourOf noun inflection | canUsePI noun =
+   case inflection of
+      PredicativeIdentity -> Just (Tuple Verb1 true)
+      Possession -> Just (Tuple noun true)
+      AttributiveIdentityPostfix -> Just (Tuple Modifier true)
+      AttributiveIdentityPrefix -> Just (Tuple Modifier true)
+      SpecificGerund -> Just (Tuple UncountableNoun true)
+      Quality -> Just (Tuple UncountableNoun false)
+      Lone -> Just (Tuple Verb0 false)
+      Possessive -> Just (Tuple Verb1 false)
+      Possessive0 -> Just (Tuple Verb0 false)
+      Translative -> Just (Tuple Verb1 false)
+      Translative0 -> Just (Tuple Verb0 false)
+      _ -> Nothing
+behaviourOf Verb1 Argument1 = Just (Tuple CountableNoun false)
+behaviourOf Verb3 Argument3 = Just (Tuple CountableNoun false)
 behaviourOf Verb12 Argument1 = Just (Tuple CountableNoun false)
 behaviourOf Verb12 Argument2 = Just (Tuple CountableNoun false)
+behaviourOf Verb23 Argument3 = Just (Tuple CountableNoun false)
+behaviourOf Verb123 Argument3 = Just (Tuple CountableNoun false)
 behaviourOf noun Possessive | canUsePI noun = Just (Tuple Verb1 false)
 behaviourOf verb Perfect | isVerbType verb = Just (Tuple verb true)
 behaviourOf wordtype Postfixed | canBePostfixed wordtype = Just (Tuple wordtype false)

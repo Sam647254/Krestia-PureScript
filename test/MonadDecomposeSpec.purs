@@ -3,6 +3,7 @@ module Test.MonadicDecomposeSpec where
 import Prelude
 
 import Data.Maybe (Maybe(..))
+import Data.Traversable (traverse)
 import Krestia.Decomposition (DecomposedWord(..))
 import Krestia.MonadicDecomposition (decompose)
 import Krestia.WordTypes (Inflection(..), WordType(..))
@@ -18,6 +19,9 @@ testInflectedWord :: String -> String -> WordType -> Array Inflection -> Test
 testInflectedWord word baseWord wordtype inflections =
    Just (DecomposedWord {steps: inflections, baseType: wordtype, baseWord}) `equal`
       decompose word
+
+testInvalidWord :: String -> Test
+testInvalidWord = decompose >>> equal Nothing
 
 spec :: TestSuite
 spec = suite "Decompose" do
@@ -45,3 +49,9 @@ spec = suite "Decompose" do
       testInflectedWord "betetiega" "bet" Verb12 [Argument1, AttributiveIdentityPostfix]
       testInflectedWord "betetio" "bet" Verb12 [Argument1, PredicativeIdentity]
       testInflectedWord "todru" "todre" CountableAssociativeNoun [Postfixed, PredicativeIdentity]
+      testInflectedWord "meperilasetieremela" "mep" Verb123
+         [Argument3, Translative, Argument1, Possessive0, Intention]
+   
+   test "can reject invalid words" do
+      _ <- traverse testInvalidWord ["t", "tatt", "ah"]
+      pure unit
