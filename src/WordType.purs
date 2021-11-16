@@ -271,6 +271,7 @@ behavesLike _ _ = false
 
 -- TODO: Finish this list
 behaviourOf :: WordType -> Inflection -> Maybe (Tuple WordType Boolean)
+behaviourOf wordtype Postfixed | canBePostfixed wordtype = Just (Tuple wordtype false)
 behaviourOf noun inflection | canUsePI noun =
    case inflection of
       PredicativeIdentity -> Just (Tuple Verb1 true)
@@ -285,15 +286,51 @@ behaviourOf noun inflection | canUsePI noun =
       Translative -> Just (Tuple Verb1 false)
       Translative0 -> Just (Tuple Verb0 false)
       _ -> Nothing
-behaviourOf Verb1 Argument1 = Just (Tuple CountableNoun false)
-behaviourOf Verb3 Argument3 = Just (Tuple CountableNoun false)
-behaviourOf Verb12 Argument1 = Just (Tuple CountableNoun false)
-behaviourOf Verb12 Argument2 = Just (Tuple CountableNoun false)
-behaviourOf Verb23 Argument3 = Just (Tuple CountableNoun false)
-behaviourOf Verb123 Argument3 = Just (Tuple CountableNoun false)
-behaviourOf noun Possessive | canUsePI noun = Just (Tuple Verb1 false)
-behaviourOf verb Perfect | isVerbType verb = Just (Tuple verb true)
-behaviourOf wordtype Postfixed | canBePostfixed wordtype = Just (Tuple wordtype false)
+behaviourOf verb inflection | isVerbType verb =
+   case inflection of
+      Perfect -> Just (Tuple verb true)
+      Hypothetical -> Just (Tuple verb true)
+      Intention -> Just (Tuple verb true)
+      argument | hasArgument verb argument -> Just (Tuple CountableNoun false)
+      Gerund -> Just (Tuple UncountableNoun false)
+      Desiderative -> Just (Tuple verb true)
+      Imperative -> Just (Tuple verb true)
+      Commencement -> Just (Tuple verb false)
+      Partial1 ->
+         case verb of
+            Verb1 -> Just (Tuple Verb0 false)
+            Verb12 -> Just (Tuple Verb2 false)
+            Verb13 -> Just (Tuple Verb3 false)
+            Verb123 -> Just (Tuple Verb23 false)
+            _ -> Nothing
+      Partial2 ->
+         case verb of
+            Verb2 -> Just (Tuple Verb0 false)
+            Verb12 -> Just (Tuple Verb1 false)
+            Verb23 -> Just (Tuple Verb3 false)
+            Verb123 -> Just (Tuple Verb12 false)
+            _ -> Nothing
+      Partial3 ->
+         case verb of
+            Verb3 -> Just (Tuple Verb0 false)
+            Verb13 -> Just (Tuple Verb1 false)
+            Verb23 -> Just (Tuple Verb2 false)
+            Verb123 -> Just (Tuple Verb12 false)
+            _ -> Nothing
+      Reflection ->
+         case verb of
+            Verb12 -> Just (Tuple Verb1 false)
+            Verb123 -> Just (Tuple Verb13 false)
+            _ -> Nothing
+      Reflection1 | verb == Verb123 -> Just (Tuple Verb1 false)
+      Reflection0 ->
+         case verb of
+            Verb12 -> Just (Tuple Verb0 false)
+            Verb123 -> Just (Tuple Verb0 false)
+            _ -> Nothing
+      Shift2 -> Just (Tuple verb false)
+      Shift3 -> Just (Tuple verb false)
+      _ -> Nothing
 behaviourOf _ _ = Nothing
 
 usesPredicativeIdentity :: Inflection -> Maybe Inflection
@@ -311,6 +348,17 @@ canUsePI =
       , CountableAssociativeNoun
       , UncountableAssociativeNoun
       ])
+
+hasArgument :: WordType -> Inflection -> Boolean
+hasArgument Verb1 Argument1 = true
+hasArgument Verb2 Argument2 = true
+hasArgument Verb3 Argument3 = true
+hasArgument Verb12 argument = argument == Argument1 || argument == Argument2
+hasArgument Verb13 argument = argument == Argument1 || argument == Argument3
+hasArgument Verb23 argument = argument == Argument2 || argument == Argument3
+hasArgument Verb123 argument =
+   argument == Argument1 || argument == Argument2 || argument == Argument3
+hasArgument _ _ = false
 
 canBePostfixed :: WordType -> Boolean
 canBePostfixed =

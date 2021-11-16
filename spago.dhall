@@ -22,6 +22,7 @@ to generate this file without the comments in this block.
    , "express"
    , "ordered-collections"
    , "foreign-object"
+   , "debug"
    ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
